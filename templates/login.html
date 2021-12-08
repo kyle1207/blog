@@ -10,6 +10,7 @@
 <div class="container">
     <div class="col-md-6 col-lg-offset-3">
         <form>
+            {% csrf_token %}
             <div class="form-group">
                 <label for="user">用户名</label>
                 <input type="text" id="user" class="form-control">
@@ -21,10 +22,12 @@
             </div>
 
             <div class="form-group">
-                <lable for="pwd">验证码</lable>
+                <label for="pwd">验证码</label>
                 <div class="row">
                     <div class="col-md-6">
-                        <input type="text" class="valid_code form-control">
+                        <label>
+                            <input type="text" class="form-control" id="valid_code">
+                        </label>
                     </div>
 
                     <div class="col-md-6">
@@ -32,7 +35,8 @@
                     </div>
                 </div>
             </div>
-            <input type="button" class="btn btn-default login_btn" value="submit">
+            <input type="button" class="btn btn-default login_btn" value="submit"><span class="error"></span>
+            <a href="/register/" class="btn btn-success pull-right">注册</a>
         </form>
     </div>
 </div>
@@ -42,8 +46,39 @@
 <script>
     // 刷新验证码
     $("#valid_code_img").click(function(){
-        $(this)[0].str+="?"
+        $(this)[0].src+="?"
     });
+
+    //登陆验证
+    $(".login_btn").click(function () {
+
+        $.ajax({
+            url:"",
+            type:"post",
+            data:{
+                user:$("#user").val(),
+                pwd:$("#pwd").val(),
+                valid_code:$("#valid_code").val(),
+                csrfmiddlewaretoken:$("[name='csrfmiddlewaretoken']").val(),
+            },
+            success:function (data) {
+                console.log(data);
+                if (data.user){
+                    location.href = "/index/"
+                }
+                else{
+                    $(".error").text(data.msg).css({"color":"red", "margin-left":"10px"})
+                    // 一秒后清空报错信息
+                    setTimeout(function () {
+
+                        $(".error").text("")
+
+                    },1000)
+                }
+            }
+        })
+    })
+
 
 
 </script>

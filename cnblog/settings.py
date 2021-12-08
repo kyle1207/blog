@@ -84,7 +84,7 @@ DATABASES = {
         'USER': 'root',        # 链接数据库的用户名
         'PASSWORD': '123456',  # 连接数据库的密码
         'HOST': 'localhost',   # 连接主机，默认本机
-        'PORT': '3307',        # 端口 默认3306
+        'PORT': '3306',        # 端口 默认3306
     }
 }
 
@@ -114,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
@@ -130,3 +130,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
+
+# 与用户上传相关的配置
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"

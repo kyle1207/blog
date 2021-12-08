@@ -1,80 +1,91 @@
-import random
+# _*_coding: utf-8_*_
+#
+# @author: kyle
+# @date: 2021/12/5 17:08
 
-from django.http import HttpResponse
-from django.shortcuts import render
+from django.contrib import auth
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect
+
+from blog import models
+from blog.Myforms import UserForm
+from blog.models import UserInfo
+from blog.utils import validCode
 
 
-# Create your views here.
 def login(request):
+    if request.method == "POST":
+        response = {"user": None, "msg": None}
+
+        user = request.POST.get("user")
+        pwd = request.POST.get("pwd")
+
+        valid_code = request.POST.get("valid_code")
+        valid_code_str = request.session.get("valid_code_str")
+        if valid_code.upper() == valid_code_str.upper():
+            user = auth.authenticate(username=user, password=pwd)
+            if user:
+                auth.login(request, user)  # request.user == 当前登陆对象
+                response["user"] = user.username
+            else:
+                # alert("username or password error!")
+                response["msg"] = "user or password error!"
+        else:
+            response["msg"] = "valid code error!"
+        return JsonResponse(response)
     return render(request, "login.html")
 
 
 def get_validCode_img(request):
-    def get_random_color():
-        return (random.randint(0, 255),
-                random.randint(0, 255),
-                random.randint(0, 255),)
+    """
+    基于PIL模块动态生成响应状态码图片
+    :param request:
+    :return:
+    """
+    img_data = validCode.get_valid_code_img(request)
+    return HttpResponse(img_data)
 
-    # 方式一：
-    # with open("imgname.jpg", "rb") as f:
-    #     data = f.read()
-    # return HttpResponse(data)
 
-    # 方式二：文件操作 -- 磁盘操作教慢
-    # from PIL import Image
-    # img = Image.new("RGB", (270, 40), color=get_random_color())
-    #
-    # with open("validCode.png", "wb") as f:
-    #     img.save(f, "png")
-    #
-    # with open("validCode.png", "rb") as f:
-    #     data = f.read()
-    #
-    # return HttpResponse(data)
+def index(request):
+    article_list = models.Article.objects.all()
+    return render(request, "index.html", {"article_list": article_list})
 
-    # 方式三：
-    # from PIL import Image
-    # from io import BytesIO
-    # img = Image.new("RGB", (270, 40), color=get_random_color())
 
-    # 内存处理
-    # f = BytesIO()
-    # img.save(f, "png")
-    # data = f.getvalue()
-    # return HttpResponse(data)
+def register(request):
+    # 提交检验
+    if request.is_ajax():
+        # print(request.POST)
+        form = UserForm(request.POST)
 
-    # 方式四：
-    from PIL import Image, ImageDraw, ImageFont
-    from io import BytesIO
-    import random
-    img = Image.new("RGB", (270, 40), color=get_random_color())
-    draw = ImageDraw.Draw(img)
-    kumo_font=ImageFont.truetype("static/font/kumo.ttf", size=36)
+        response = {"user": None, "msg": None}
+        if form.is_valid():
+            response["user"] = form.cleaned_data.get("user")
 
-    for i in range(5):
-        random_num = str(random.randint(0,9))
-        random_low_alpha = chr(random.randint(95,122))
-        random_upper_alpha = chr(random.randint(65,90))
-        random_char = random.choice([random_num,random_low_alpha,random_upper_alpha])
-        #draw.text((0,5),"python",get_random_color(),font=kumo_font)
-        draw.text((i*46+20,5),random_char,get_random_color(),font=kumo_font)
-    # width=270
-    # height=40
-    # for i in range(10):
-    #     x1=random.randint(0,width)
-    #     x2=random.randint(0,width)
-    #     y1=random.randint(0,height)
-    #     y2=random.randint(0,height)
-    #     draw.line((x1,y1,x2,y2),fill=get_random_color())
-    #
-    # for i in range(100):
-    #     draw.point([random.randint(0, width), random.randint(0, height)], fill=get_random_color())
-    #     x = random.randint(0, width)
-    #     y = random.randint(0, height)
-    #     draw.arc((x, y, x + 4, y + 4), 0, 90, fill=get_random_color())
-    #
+            # 生成一条用户记录
+            user = form.cleaned_data.get("user")
+            print("user:", user)
+            pwd = form.cleaned_data.get("pwd")
+            email = form.cleaned_data.get("email")
 
-    f = BytesIO()
-    img.save(f, "png")
-    data = f.getvalue()
-    return HttpResponse(data)
+            avatar_obj = request.FILES.get("avatar")
+            extra = {}
+            if avatar_obj:
+                extra["avatar"] = avatar_obj
+                # user_obj = UserInfo.objects.create_user(username=user, password=pwd, email=email, avatar=avatar_obj)
+                # user_obj = UserInfo.objects.create_user(username=user, password=pwd, email=email, **extra)
+                UserInfo.objects.create_user(username=user, password=pwd, email=email, **extra)
+
+        else:
+            print(form.cleaned_data)
+            print(form.errors)
+            response["msg"] = form.errors
+        return JsonResponse(response)
+
+    form = UserForm()
+    return render(request, "register.html", {"form": form})
+
+
+def logout(request):
+    # 等同于 request.session.flush()
+    auth.logout(request)
+    return redirect("/login/")
